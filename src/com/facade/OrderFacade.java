@@ -18,33 +18,30 @@ public class OrderFacade {
         this.shippingService = new ShippingService();
     }
 
-    public boolean placeOrder(int orderId, int quantity, double amount, int customerId, String address, String email){
+    public void placeOrder(int orderId, int quantity, double amount, int customerId, String address, String email){
         System.out.println("====== Ordering system ======");
 
-        if(!inventoryService.checkStock(orderId, quantity)){
-            System.out.println("Order could not be placed");
-            return false;
-        }
-        inventoryService.reserveStock(orderId);
-
-        boolean paymentSuccess = paymentProcessor.processPayment(orderId, amount);
+        boolean paymentSuccess = paymentProcessor.processPayment(orderId, amount, quantity);
         if(!paymentSuccess){
             System.out.println("Order is rejected");
-            inventoryService.releaseStock(orderId);
-            return false;
-        }
-
-        try{
-            int trackingNumber = shippingService.arrangeShipping(orderId, address);
-            notificationService.sendOrderConfirmation(email, trackingNumber);
-            System.out.println("Shipping service successfully done. Tracking number " + trackingNumber);
             System.out.println("=============================");
-            return true;
-        } catch (Exception e){
-            System.out.println("Occurred error!");
-            paymentProcessor.refundPayment(orderId, amount);
-            inventoryService.releaseStock(orderId);
-            return false;
+        } else {
+            if(!inventoryService.checkStock(orderId, quantity)){
+                System.out.println("Order could not be placed");
+            } else{
+                inventoryService.reserveStock(orderId);
+            }
+
+            try{
+                int trackingNumber = shippingService.arrangeShipping(orderId, address);
+                notificationService.sendOrderConfirmation(email, trackingNumber);
+                System.out.println("Shipping service successfully done. Tracking number " + trackingNumber);
+                System.out.println("=============================");
+            } catch (Exception e){
+                System.out.println("Occurred error!");
+                paymentProcessor.refundPayment(orderId, amount);
+                inventoryService.releaseStock(orderId);
+            }
         }
     }
 }
